@@ -5,15 +5,15 @@ const geoip = require("geoip-lite");
 
 const app = express();
 app.set("trust proxy", true);
+
 const server = http.createServer(app);
 const io = new Server(server);
 
 app.use(express.static("public"));
 
+// SINGLE SOURCE OF TRUTH
 const visitors = {};
-const countryCounts = {};
 
-// 2-letter to 3-letter ISO Code Mapping
 const iso2To3 = {
   IN: "IND",
   US: "USA",
@@ -40,11 +40,8 @@ function getRandomColor() {
   return `hsl(${hue}, 85%, 60%)`;
 }
 
-// Extract the true client IP from proxy headers
 function getRealClientIp(socket) {
   const headers = socket.handshake.headers;
-
-  // Check headers in order of accuracy
   let ip =
     headers["cf-connecting-ip"] ||
     headers["x-real-ip"] ||
@@ -52,23 +49,18 @@ function getRealClientIp(socket) {
     socket.handshake.address ||
     "";
 
-  // If x-forwarded-for contains multiple IPs, take the FIRST one (the real client IP)
   if (ip.includes(",")) {
     ip = ip.split(",")[0].trim();
   }
-
-  // Remove IPv6 prefix if present (e.g., ::ffff:103.21.124.15)
   if (ip.startsWith("::ffff:")) {
     ip = ip.replace("::ffff:", "");
   }
-
   return ip;
 }
 
 function getCountryFromIp(socket) {
   const cleanIp = getRealClientIp(socket);
 
-  // Fallback for local testing
   if (
     cleanIp === "127.0.0.1" ||
     cleanIp === "::1" ||
@@ -86,8 +78,16 @@ function getCountryFromIp(socket) {
   return "UNK";
 }
 
+// Calculate country counts dynamically from active visitors ONLY
+function getActiveCountryCounts() {
+  const counts = {};
+  Object.values(visitors).forEach((v) => {
+    counts[v.country] = (counts[v.country] || 0) + 1;
+  });
+  return counts;
+}
+
 io.on("connection", (socket) => {
-  // Get real country from connection
   const country = getCountryFromIp(socket);
 
   visitors[socket.id] = {
@@ -99,47 +99,23 @@ io.on("connection", (socket) => {
     angle: 225,
   };
 
-  countryCounts[country] = (countryCounts[country] || 0) + 1;
+  const countryCounts = getActiveCountryCounts();
+  const activeCount = Object.keys(visitors).length;
 
+  // Send initial state to new connection
   socket.emit("init", {
     id: socket.id,
     color: visitors[socket.id].color,
     visitors,
     countryCounts,
-    activeVisitors: Object.keys(visitors).length,
+    activeVisitors: activeCount,
   });
 
+  // Broadcast connection to other visitors
   socket.broadcast.emit("visitor-connected", {
     visitor: visitors[socket.id],
     countryCounts,
-    activeVisitors: Object.keys(visitors).length,
-  });
-
-  visitors[socket.id] = {
-    id: socket.id,
-    color: getRandomColor(),
-    country: country,
-    xRatio: 0.5,
-    yRatio: 0.5,
-    angle: 225,
-  };
-
-  countryCounts[country] = (countryCounts[country] || 0) + 1;
-
-  // Send initial state to newly connected visitor
-  socket.emit("init", {
-    id: socket.id,
-    color: visitors[socket.id].color,
-    visitors,
-    countryCounts,
-    activeVisitors: Object.keys(visitors).length,
-  });
-
-  // Broadcast new connection to other visitors
-  socket.broadcast.emit("visitor-connected", {
-    visitor: visitors[socket.id],
-    countryCounts,
-    activeVisitors: Object.keys(visitors).length,
+    activeVisitors: activeCount,
   });
 
   // Handle cursor movement
@@ -155,22 +131,17 @@ io.on("connection", (socket) => {
 
   // Handle disconnect
   socket.on("disconnect", () => {
-    const visitor = visitors[socket.id];
-    if (visitor) {
-      const country = visitor.country;
-      delete visitors[socket.id];
+    if (visitors[socket.id]) {
+      delete visitors[socket.id]; // Delete visitor first
 
-      if (countryCounts[country]) {
-        countryCounts[country]--;
-        if (countryCounts[country] <= 0) {
-          delete countryCounts[country];
-        }
-      }
+      // Recalculate exact counts after deletion
+      const updatedCountryCounts = getActiveCountryCounts();
+      const updatedActiveCount = Object.keys(visitors).length;
 
       io.emit("visitor-disconnected", {
         id: socket.id,
-        countryCounts,
-        activeVisitors: Object.keys(visitors).length,
+        countryCounts: updatedCountryCounts,
+        activeVisitors: updatedActiveCount,
       });
     }
   });
