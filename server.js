@@ -4,6 +4,7 @@ const { Server } = require("socket.io");
 const geoip = require("geoip-lite");
 
 const app = express();
+app.set("trust proxy", true);
 const server = http.createServer(app);
 const io = new Server(server);
 
@@ -39,27 +40,80 @@ function getRandomColor() {
   return `hsl(${hue}, 85%, 60%)`;
 }
 
-function getCountryFromIp(ip) {
-  let cleanIp = ip.replace(/^.*:/, "");
+// Extract the true client IP from proxy headers
+function getRealClientIp(socket) {
+  const headers = socket.handshake.headers;
+
+  // Check headers in order of accuracy
+  let ip =
+    headers["cf-connecting-ip"] ||
+    headers["x-real-ip"] ||
+    headers["x-forwarded-for"] ||
+    socket.handshake.address ||
+    "";
+
+  // If x-forwarded-for contains multiple IPs, take the FIRST one (the real client IP)
+  if (ip.includes(",")) {
+    ip = ip.split(",")[0].trim();
+  }
+
+  // Remove IPv6 prefix if present (e.g., ::ffff:103.21.124.15)
+  if (ip.startsWith("::ffff:")) {
+    ip = ip.replace("::ffff:", "");
+  }
+
+  return ip;
+}
+
+function getCountryFromIp(socket) {
+  const cleanIp = getRealClientIp(socket);
+
+  // Fallback for local testing
   if (
     cleanIp === "127.0.0.1" ||
-    cleanIp === "1" ||
+    cleanIp === "::1" ||
     cleanIp.startsWith("192.168.") ||
     cleanIp.startsWith("10.")
   ) {
     return mockCountries[Math.floor(Math.random() * mockCountries.length)];
   }
+
   const geo = geoip.lookup(cleanIp);
   if (geo && geo.country) {
     return iso2To3[geo.country] || geo.country;
   }
+
   return "UNK";
 }
 
 io.on("connection", (socket) => {
-  const clientIp =
-    socket.handshake.headers["x-forwarded-for"] || socket.handshake.address;
-  const country = getCountryFromIp(clientIp);
+  // Get real country from connection
+  const country = getCountryFromIp(socket);
+
+  visitors[socket.id] = {
+    id: socket.id,
+    color: getRandomColor(),
+    country: country,
+    xRatio: 0.5,
+    yRatio: 0.5,
+    angle: 225,
+  };
+
+  countryCounts[country] = (countryCounts[country] || 0) + 1;
+
+  socket.emit("init", {
+    id: socket.id,
+    color: visitors[socket.id].color,
+    visitors,
+    countryCounts,
+    activeVisitors: Object.keys(visitors).length,
+  });
+
+  socket.broadcast.emit("visitor-connected", {
+    visitor: visitors[socket.id],
+    countryCounts,
+    activeVisitors: Object.keys(visitors).length,
+  });
 
   visitors[socket.id] = {
     id: socket.id,
