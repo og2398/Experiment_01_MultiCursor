@@ -5,7 +5,7 @@ const activeCountEl = document.getElementById("active-count");
 const countryListEl = document.getElementById("country-list");
 
 let myId = null;
-let myColor = "#005EFF";
+let myColor = "#101010";
 let lastX = 0;
 let lastY = 0;
 const visitorMap = new Map();
