@@ -1,0 +1,138 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+}
+
+body, html {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background-color: #ffffff;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #101010;
+    -webkit-font-smoothing: antialiased;
+}
+
+#app {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+/* Top-Left Panel */
+.hud-left {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.title {
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: -0.02em;
+    color: #101010;
+}
+
+.stat {
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: -0.02em;
+    color: #101010;
+}
+
+/* Top-Right Panel */
+.hud-right {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    z-index: 10;
+    pointer-events: none;
+}
+
+#country-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.country-item {
+    font-size: 0.8rem;
+    font-weight: 400;
+    letter-spacing: 0.05em;
+    color: #101010;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    animation: fadeIn 0.25s ease-out;
+}
+
+.country-code {
+    font-family: 'Roboto' monospace;
+    font-weight: 400;
+    letter-spacing: 0.05em;
+}
+
+.country-num {
+    font-weight: 400;
+    min-width: 32px;
+    text-align: right;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Cursor Canvas */
+#cursor-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.visitor-arrow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    transform-origin: center center;
+    transition: transform 0.05s ease-out, left 0.08s linear, top 0.08s linear;
+    will-change: transform, left, top;
+}
+
+.visitor-arrow.normal {
+    width: 24px;
+    height: 24px;
+    margin-left: -12px;
+    margin-top: -12px;
+}
+
+.visitor-arrow.highlighted {
+    width: 32px;
+    height: 32px;
+    margin-left: -24px;
+    margin-top: -24px;
+    z-index: 20;
+}
+
+.visitor-arrow svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}

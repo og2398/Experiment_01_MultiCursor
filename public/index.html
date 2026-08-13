@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Multi Cursor</title>
+    <!-- Geist Font -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-sans/style.css"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- Top-Left Visitor Counter -->
+      <header class="hud-left">
+        <h1 class="title">Multi Cursor</h1>
+        <p class="stat">Active visitors: <span id="active-count">01</span></p>
+      </header>
+
+      <!-- Top-Right Short Country List -->
+      <aside class="hud-right">
+        <div id="country-list"></div>
+      </aside>
+
+      <!-- Cursor Canvas Overlay -->
+      <div id="cursor-container"></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
